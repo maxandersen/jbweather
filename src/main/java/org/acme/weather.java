@@ -1,6 +1,12 @@
+///usr/bin/env jbang "$0" "$@" ; exit $?
+//DEPS io.quarkus:quarkus-bom:3.17.6@pom
+//DEPS io.quarkiverse.mcp:quarkus-mcp-server-stdio:1.0.0.Alpha2
+//DEPS io.quarkus:quarkus-rest-client
+//DEPS io.quarkus:quarkus-qute
+//FILES ../../../resources/application.properties
+
 package org.acme;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -12,7 +18,7 @@ import org.jboss.resteasy.reactive.RestPath;
 import io.quarkiverse.mcp.server.Tool;
 import io.quarkiverse.mcp.server.ToolArg;
 import io.quarkus.qute.Qute;
-import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
+import io.quarkus.rest.client.reactive.Url;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -46,13 +52,7 @@ public class weather {
         var url = Qute.fmt("{p.properties.forecast.toString()}", Map.of("p", points));
         url = url.replace("\"", ""); // TODO: not sure why we get "" around the url
 
-        var otherClient = QuarkusRestClientBuilder.newBuilder()
-
-                .baseUri(URI.create(url))
-                .followRedirects(true) // TODO: not sure why we need this
-                .build(WeatherClient.class);
-
-        return otherClient.getForecast().properties().periods().stream().map(period -> {
+        return weatherClient.getForecast(url).properties().periods().stream().map(period -> {
 
             return Qute.fmt(
                     """
@@ -76,7 +76,7 @@ public class weather {
 
         @GET
         @Path("/")
-        Forecast getForecast();
+        Forecast getForecast(@Url String url);
     }
 
     static record Properties(
